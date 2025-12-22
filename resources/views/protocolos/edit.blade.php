@@ -85,8 +85,8 @@
                 {{-- Etapa 1 --}}
                 <div class="etapa-card {{ $done[1] ? 'etapa-done' : '' }}">
                     <div>
-                        <p class="etapa-label">Etapa 1 - ActivaciÃ³n</p>
-                        <p class="etapa-desc">Pasar a En EjecuciÃ³n y fijar inicio.</p>
+                        <p class="etapa-label">Etapa 1 - Activación</p>
+                        <p class="etapa-desc">Pasar a En Ejecución y fijar inicio.</p>
                     </div>
                     <button class="btn-ghost" data-toggle="modal" data-target="#modal-etapa1">Gestionar</button>
                 </div>
@@ -103,8 +103,8 @@
                 {{-- Etapa 3 --}}
                 <div class="etapa-card {{ $done[3] ? 'etapa-done' : '' }}">
                     <div>
-                        <p class="etapa-label">Etapa 3 - ClasificaciÃ³n (Â¿es delito?)</p>
-                        <p class="etapa-desc">Si es delito: denuncia inmediata. Si no, sanciÃ³n.</p>
+                        <p class="etapa-label">Etapa 3 - Clasificación (¿es delito?)</p>
+                        <p class="etapa-desc">Si es delito: denuncia inmediata. Si no, sanción.</p>
                     </div>
                     <button class="btn-ghost" data-toggle="modal" data-target="#modal-etapa3">Gestionar</button>
                 </div>
@@ -113,7 +113,7 @@
                 <div class="etapa-card {{ $done[4] ? 'etapa-done' : '' }}">
                     <div>
                         <p class="etapa-label">Etapa 4 - Entrevistas apoderados</p>
-                        <p class="etapa-desc">Agendar reuniones vÃ­ctima/agresor.</p>
+                        <p class="etapa-desc">Agendar reuniones ví­ctima/agresor.</p>
                     </div>
                     <button class="btn-ghost" data-toggle="modal" data-target="#modal-etapa4">Gestionar</button>
                 </div>
@@ -158,7 +158,7 @@
         @csrf @method('PUT')
         <input type="hidden" name="etapa" value="1">
         <div class="modal-header">
-          <h4 class="modal-title">Etapa 1: ActivaciÃ³n</h4>
+          <h4 class="modal-title">Etapa 1: Activación</h4>
           <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color:#fff;">
             <span aria-hidden="true">&times;</span>
           </button>
@@ -167,7 +167,7 @@
             <div class="form-group">
                 <label>Estado</label>
                 <select name="estado" class="form-control">
-                    <option value="En Ejecucion" {{ $protocolo->estado === 'En Ejecucion' ? 'selected' : '' }}>En EjecuciÃ³n</option>
+                    <option value="En Ejecucion" {{ $protocolo->estado === 'En Ejecucion' ? 'selected' : '' }}>En Ejecución</option>
                     <option value="Activo" {{ $protocolo->estado === 'Activo' ? 'selected' : '' }}>Activo</option>
                 </select>
             </div>
