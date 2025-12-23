@@ -177,10 +177,18 @@
                                 <td>{{ \Carbon\Carbon::parse($protocolo->created_at)->format('d-m-Y') }}</td>
                                 <td><span class="badge-state" style="background:{{ $bg }};">{{ $protocolo->estado }}</span></td>
                                 <td class="text-center">
-                                    <a href="{{ url('protocolos/'.$protocolo->id.'/edit') }}" class="btn btn-ghost btn-sm" style="padding:6px 10px;">
-                                        <i class="fa fa-edit"></i> Gestionar
-                                    </a>
+                                    @php $tipo = strtolower($protocolo->tipo); @endphp
+                                    @if($tipo === 'agresion sexual' || $tipo === 'agresión sexual')
+                                        <a href="{{ route('protocolos.agresion', $protocolo->id) }}" class="btn btn-ghost btn-sm" style="padding:6px 10px;">
+                                            <i class="fa fa-edit"></i> Gestionar (Agresión)
+                                        </a>
+                                    @else
+                                        <a href="{{ url('protocolos/'.$protocolo->id.'/edit') }}" class="btn btn-ghost btn-sm" style="padding:6px 10px;">
+                                            <i class="fa fa-edit"></i> Gestionar
+                                        </a>
+                                    @endif
                                 </td>
+
                             </tr>
                         @empty
                             <tr>
