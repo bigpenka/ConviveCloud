@@ -332,7 +332,17 @@
               <input type="datetime-local" name="as_e7_fecha_cierre" class="form-control" value="{{ $protocolo->as_e7_fecha_cierre ? \Carbon\Carbon::parse($protocolo->as_e7_fecha_cierre)->format('Y-m-d\TH:i') : '' }}">
             </div>
             <div class="checkbox">
-              <label><input type="checkbox" name="as_e7_firma_digital" value="1" {{ $protocolo->as_e7_firma_digital ? 'checked' : '' }}> Firma digital</label>
+              <label><input type="checkbox" id="chk-firma" name="as_e7_firma_digital" value="1" {{ $protocolo->as_e7_firma_digital ? 'checked' : '' }}> Firma digital</label>
+            </div>
+            <div id="firma-wrap" style="display:none;">
+              <div class="form-group">
+                <label>Archivo de firma (PDF/imagen)</label>
+                <input type="file" name="as_e7_firma_archivo" class="form-control">
+              </div>
+              <div class="form-group">
+                <label>Código o referencia de firma</label>
+                <input type="text" name="as_e7_firma_codigo" class="form-control" placeholder="TOKEN / referencia">
+              </div>
             </div>
             <div class="form-group">
               <label>Certificado PDF (opcional)</label>
@@ -347,15 +357,23 @@
     </div>
   </div>
 </div>
-@push('scripts')
+@section('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const chk = document.getElementById('chk-notificar');
     const wrap = document.getElementById('correo-destino-wrap');
+    const chkFirma = document.getElementById('chk-firma');
+    const wrapFirma = document.getElementById('firma-wrap');
+
     if (chk && wrap) {
         const toggle = () => wrap.style.display = chk.checked ? 'block' : 'none';
         chk.addEventListener('change', toggle);
-        toggle(); // estado inicial
+        toggle();
+    }
+    if (chkFirma && wrapFirma) {
+        const toggleFirma = () => wrapFirma.style.display = chkFirma.checked ? 'block' : 'none';
+        chkFirma.addEventListener('change', toggleFirma);
+        toggleFirma();
     }
     document.querySelectorAll('.custom-file-input').forEach(inp => {
         inp.addEventListener('change', () => {
@@ -365,5 +383,5 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
-@endpush
+@endsection
 
