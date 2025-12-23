@@ -50,7 +50,7 @@
     <div class="card">
         <div style="text-align:center; margin-bottom:24px;">
             <div style="display:inline-flex; align-items:center; justify-content:center; width:78px; height:78px; border-radius:18px; background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.35); margin-bottom:12px;">
-                <img src="{{ asset('img/logo.png') }}" alt="ConviveCloud" style="width:200px; height:200px; object-fit:contain;">
+                <img src="{{ asset('img/logo.png') }}" alt="ConviveCloud" style="width:48px; height:48px; object-fit:contain;">
             </div>
             <h1 style="margin:0; color:#e5e7eb; font-size:24px; font-weight:800;">ConviveCloud</h1>
             <p class="muted tiny" style="margin:4px 0 0;">Plataforma de gestión de convivencia escolar</p>

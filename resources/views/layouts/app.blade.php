@@ -51,9 +51,12 @@
 <body>
 
     <header class="main-header">
-        <div class="logo">
-            <strong style="font-size: 1.2rem; color: #38bdf8;">ConviveCloud</strong>
-        </div>
+        <div class="logo" style="display:flex; align-items:center; gap:10px; height:48px;">
+    <img src="{{ asset('img/logo.png') }}" alt="ConviveCloud"
+         style="width:48px; height:48px; object-fit:contain; flex-shrink:0;">
+    <strong style="font-size: 1.2rem; color: #38bdf8; line-height:1;">ConviveCloud</strong>
+</div>
+
         <div class="user-menu" style="position: relative;">
     <div id="userToggle" style="cursor:pointer; display:flex; align-items:center; gap:6px; color:#e2e8f0;">
         <span>{{ Auth::user()->name ?? 'Usuario' }}</span>
