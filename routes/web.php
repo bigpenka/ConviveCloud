@@ -51,6 +51,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::resource('docentes', DocenteController::class);
+    Route::post('/protocolos/{id}/asignar-agresor', [App\Http\Controllers\ProtocoloController::class, 'asignarAgresor'])
+     ->name('protocolos.asignar-agresor');
+     Route::get('/api/buscar-personas', function (Illuminate\Http\Request $request) {
+    $tipo = $request->query('tipo');
+    if ($tipo === 'estudiante') {
+        return DB::table('estudiantes')->select('id', 'nombre', 'apellido', 'rut')->get();
+    }
+    return DB::table('docentes')->select('id', 'nombre', 'apellido', 'rut')->get();
+});
 });
 
 require __DIR__.'/auth.php';
