@@ -130,15 +130,21 @@
                         </div>
                     </div>
                     <div style="flex:1; min-width:240px;">
-                        <div class="card" style="padding:12px; border-radius:10px; border:1px solid var(--stroke);">
-                            <p class="label" style="margin:0; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; font-size:11px;">Docentes (próximamente)</p>
-                            <p style="margin:4px 0 10px 0; font-size:18px; font-weight:700; color:var(--muted);">Pendiente</p>
-                            <div class="d-flex" style="gap:8px;">
-                                <button class="btn btn-ghost btn-sm" disabled title="Próximamente">Ver listado</button>
-                                <button class="btn btn-solid btn-sm" disabled title="Próximamente">Agregar</button>
-                            </div>
-                        </div>
-                    </div>
+    <div class="card" style="padding:12px; border-radius:10px; border:1px solid var(--stroke);">
+        <p class="label" style="margin:0; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; font-size:11px;">Docentes registrados</p>
+        
+        {{-- Mostramos el conteo real que viene del controlador --}}
+        <p style="margin:4px 0 10px 0; font-size:22px; font-weight:800; color:var(--text);">
+            {{ $total_docentes ?? 0 }}
+        </p>
+
+        <div class="d-flex" style="gap:8px;">
+            {{-- Activamos los botones con las rutas correctas --}}
+            <a href="{{ url('docentes') }}" class="btn btn-ghost btn-sm">Ver listado</a>
+            <a href="{{ url('docentes/create') }}" class="btn btn-solid btn-sm">Agregar</a>
+        </div>
+    </div>
+</div>
                 </div>
             </div>
 

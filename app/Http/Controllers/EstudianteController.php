@@ -10,11 +10,30 @@ class EstudianteController extends Controller
     /**
      * Muestra la lista de estudiantes registrados.
      */
-    public function index()
-    {
-        $estudiantes = Estudiante::all();
-        return view('estudiantes.index', compact('estudiantes'));
+public function index(Request $request)
+{
+    // 1. Obtenemos el texto que el usuario escribió en el buscador
+    $search = $request->input('search');
+
+    // 2. Iniciamos la consulta
+    $query = Estudiante::query();
+
+    // 3. Si hay algo escrito, filtramos por RUT, Nombre o Apellido
+    if ($search) {
+        $query->where(function($q) use ($search) {
+            $q->where('rut', 'LIKE', "%{$search}%")
+              ->orWhere('nombre', 'LIKE', "%{$search}%")
+              ->orWhere('apellido', 'LIKE', "%{$search}%")
+              ->orWhere('curso', 'LIKE', "%{$search}%");
+        });
     }
+
+    // 4. Obtenemos los resultados (puedes usar paginate(10) si tienes muchos)
+    $estudiantes = $query->orderBy('apellido', 'asc')->get();
+
+    // 5. Enviamos los datos a la vista
+    return view('estudiantes.index', compact('estudiantes'));
+}
 
     /**
      * Muestra el formulario de creación con el listado de cursos para el selector.
@@ -63,4 +82,5 @@ class EstudianteController extends Controller
             'IV° Medio A', 'IV° Medio B',
         ];
     }
+    
 }

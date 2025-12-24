@@ -47,22 +47,21 @@ class ProtocoloController extends Controller
             ];
             $partial = 'protocolos.partials.etapas_agresion';
         } else {
-            // Done para vulneración
-            $obsLower = strtolower($protocolo->observacion_cierre ?? '');
-            $done = [
-                'v1' => !empty($protocolo->estado) && !empty($protocolo->fecha_activacion),
-                'v2' => (bool) ($protocolo->entrevista_realizada ?? false),
-                'v3' => (bool) ($protocolo->denuncia_policia ?? false)
-                        || (bool) ($protocolo->denuncia_fiscalia ?? false)
-                        || (bool) ($protocolo->denuncia_tribunal ?? false)
-                        || str_contains($obsLower, 'sanci'),
-                'v4' => str_contains($obsLower, 'reuni') && str_contains($obsLower, 'agresor'),
-                'v5' => str_contains($obsLower, 'plan:'),
-                'v6' => !empty($protocolo->fecha_cierre) || str_contains($obsLower, 'informe cierre'),
-                'v7' => ($protocolo->estado ?? '') === 'Cerrado',
-            ];
-            $partial = 'protocolos.partials.etapas_vulneracion';
-        }
+    // Done para vulneración - Cambiamos v1 por 1, v2 por 2, etc.
+    $obsLower = strtolower($protocolo->observacion_cierre ?? '');
+    $done = [
+        1 => !empty($protocolo->estado) && !empty($protocolo->fecha_activacion),
+        2 => (bool) ($protocolo->entrevista_realizada ?? false),
+        3 => (bool) ($protocolo->denuncia_policia ?? false)
+             || (bool) ($protocolo->denuncia_fiscalia ?? false)
+             || (bool) ($protocolo->denuncia_tribunal ?? false),
+        4 => str_contains($obsLower, 'reuni'),
+        5 => str_contains($obsLower, 'plan:'),
+        6 => !empty($protocolo->fecha_cierre),
+        7 => ($protocolo->estado ?? '') === 'Cerrado',
+    ];
+    $partial = 'protocolos.partials.etapas_vulneracion';
+}
 
         return view('protocolos.edit', compact('protocolo','fechaAct','fechaCierre','done','partial'));
     }
@@ -284,4 +283,41 @@ class ProtocoloController extends Controller
         $protocolo->delete();
         return back()->with('success', 'Protocolo eliminado.');
     }
+    public function create(Request $request)
+{
+    // Capturamos el tipo (vulneracion o agresion) desde la URL
+    $tipo = $request->query('tipo', 'vulneracion');
+    
+    // Obtenemos los estudiantes para el selector del formulario
+    $estudiantes = \App\Models\Estudiante::all();
+
+    return view('protocolos.create', compact('tipo', 'estudiantes'));
 }
+public function store(Request $request)
+{
+    // Validamos que se haya seleccionado un estudiante
+    $request->validate([
+        'estudiante_id' => 'required|exists:estudiantes,id',
+        'tipo' => 'required|string'
+    ]);
+
+    // Creamos el protocolo con los datos iniciales
+    $protocolo = Protocolo::create([
+        'folio' => 'PROT-' . strtoupper(uniqid()), // Genera un folio único
+        'estudiante_id' => $request->estudiante_id,
+        'tipo' => $request->tipo,
+        'estado' => 'Activo',
+        'fecha_activacion' => now(), // Registra la activación de inmediato 
+    ]);
+
+    // Redirigimos según el tipo de protocolo para continuar con las etapas
+    if ($request->tipo === 'agresion-sexual') {
+        return redirect()->route('protocolos.agresion', $protocolo->id)
+                         ->with('success', 'Protocolo de Agresión Sexual activado correctamente.');
+    }
+
+    return redirect()->route('dashboard')->with('success', 'Protocolo de Vulneración activado.');
+}
+
+}
+
