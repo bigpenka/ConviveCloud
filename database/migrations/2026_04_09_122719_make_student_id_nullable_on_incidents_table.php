@@ -9,15 +9,15 @@ return new class extends Migration
     public function up(): void
 {
     Schema::table('incidents', function (Blueprint $table) {
-        $table->json('seguro_escolar_data')->nullable()->after('checklist');
-        $table->json('informe_accidente_data')->nullable()->after('seguro_escolar_data');
+        // 🔥 Cambiamos la columna para que acepte valores nulos
+        $table->foreignId('student_id')->nullable()->change();
     });
 }
 
 public function down(): void
 {
     Schema::table('incidents', function (Blueprint $table) {
-        $table->dropColumn(['seguro_escolar_data', 'informe_accidente_data']);
+        $table->foreignId('student_id')->nullable(false)->change();
     });
 }
 };

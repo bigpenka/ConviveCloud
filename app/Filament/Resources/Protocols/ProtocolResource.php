@@ -7,6 +7,9 @@ use App\Models\Protocol;
 use Filament\Forms\Form;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
@@ -18,39 +21,55 @@ use Filament\Tables\Actions\DeleteBulkAction;
 class ProtocolResource extends Resource
 {
     protected static ?string $model = Protocol::class;
-
-    // EL FIX: En Filament 3 solo se acepta ?string
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
-
     protected static ?string $navigationLabel = 'Protocolos';
     protected static ?string $modelLabel = 'Protocolo';
     protected static ?string $pluralModelLabel = 'Protocolos';
     protected static ?string $recordTitleAttribute = 'nombre';
 
+    protected static bool $isScopedToTenant = false;
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                TextInput::make('nombre')
-                    ->label('Nombre del Protocolo')
-                    ->required()
-                    ->placeholder('Ej: Maltrato entre alumnos'),
+                Section::make('Información del Protocolo')
+                    ->schema([
+                        TextInput::make('nombre')
+                            ->label('Nombre del Protocolo')
+                            ->required()
+                            ->columnSpanFull(),
 
-                Select::make('gravedad')
-                    ->label('Gravedad')
-                    ->options([
-                        'Leve' => 'Leve',
-                        'Mediana' => 'Mediana',
-                        'Grave' => 'Grave',
-                        'Gravísima' => 'Gravísima',
-                    ])
-                    ->required(),
+                        Select::make('gravedad')
+                            ->label('Gravedad')
+                            ->options([
+                                'Leve' => 'Leve',
+                                'Mediana' => 'Mediana',
+                                'Grave' => 'Grave',
+                                'Gravísima' => 'Gravísima',
+                                'Alta' => 'Alta',
+                            ])
+                            ->required(),
 
-                TextInput::make('plazo_dias')
-                    ->label('Plazo (Días)')
-                    ->required()
-                    ->numeric()
-                    ->suffix('días'),
+                        TextInput::make('plazo_dias')
+                            ->label('Plazo (Días)')
+                            ->required()
+                            ->numeric()
+                            ->suffix('días'),
+                    ])->columns(2),
+
+                Section::make('Etapas de Actuación (Checklist Legal)')
+                    ->schema([
+                        Repeater::make('checklist')
+                            ->label('Pasos')
+                            ->schema([
+                                TextInput::make('etapa')->required(),
+                                TextInput::make('paso')->label('Descripción')->required(),
+                                Toggle::make('obligatorio')->default(true),
+                            ])
+                            ->columns(3)
+                            ->collapsible(),
+                    ]),
             ]);
     }
 
@@ -61,42 +80,28 @@ class ProtocolResource extends Resource
                 TextColumn::make('nombre')
                     ->label('Nombre')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->wrap(),
 
                 TextColumn::make('gravedad')
-                    ->label('Gravedad')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'Leve' => 'gray',
-                        'Mediana' => 'info',
-                        'Grave' => 'warning',
-                        'Gravísima' => 'danger',
-                        default => 'gray',
-                    })
-                    ->searchable(),
+    ->label('Gravedad')
+    ->badge()
+    ->color(fn (string $state): string => match (trim($state)) {
+        'Gravísima' => 'danger',
+        'Grave', 'Alta' => 'warning',
+        'Mediana' => 'info',
+        'Leve' => 'gray',
+        default => 'gray',
+    }),
 
                 TextColumn::make('plazo_dias')
-                    ->label('Días de Plazo')
-                    ->numeric()
+                    ->label('Plazo')
+                    ->suffix(' días')
                     ->sortable(),
-
-                TextColumn::make('created_at')
-                    ->label('Creado el')
-                    ->dateTime('d/m/Y H:i')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                //
             ])
             ->actions([
                 EditAction::make(),
                 DeleteAction::make(),
-            ])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
             ]);
     }
 

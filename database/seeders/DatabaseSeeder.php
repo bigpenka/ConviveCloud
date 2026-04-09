@@ -3,23 +3,27 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // 1. Crear el usuario Admin siempre
+        User::updateOrCreate(
+            ['email' => 'admin@convivecloud.cl'],
+            [
+                'name' => 'Admin',
+                'password' => Hash::make('Admin.123456789'), // Cambia esto
+            ]
+        );
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // 2. Llamar a los otros Seeders
+        $this->call([
+            ColegioSeeder::class,
+            ProtocolAmenazaSeeder::class,
+            // Agrega aquí otros seeders que tengas (ej: Roles, Permisos)
         ]);
     }
 }

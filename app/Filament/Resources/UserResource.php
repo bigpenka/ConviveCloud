@@ -18,6 +18,9 @@ class UserResource extends Resource
     protected static ?string $navigationLabel = 'Equipo Educativo';
     protected static ?string $modelLabel = 'Usuario';
 
+    // 🔥 FIX CLAVE: Le decimos a Filament que la relación es "schools" (en plural)
+    protected static ?string $tenantOwnershipRelationshipName = 'schools';
+
     public static function form(Form $form): Form
     {
         return $form

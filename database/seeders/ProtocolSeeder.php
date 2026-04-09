@@ -2,104 +2,110 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Protocol;
 use App\Models\ProtocolStep;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class ProtocolSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $protocolos = [
+        // Limpieza total de protocolos y pasos para que no haya duplicados ni errores
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        ProtocolStep::truncate();
+        Protocol::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
+        $data = [
             [
                 'nombre' => 'Maltrato Escolar (Bullying/Agresiones)',
-                'descripcion' => 'Protocolo ante violencia física, psicológica o ciberacoso entre miembros de la comunidad.',
-                'pasos' => ['Detección y Reporte', 'Medidas de Resguardo Inmediatas', 'Comunicación a Apoderados', 'Investigación y Descargos', 'Resolución y Sanción (RICE)', 'Seguimiento Psicosocial']
+                'gravedad' => 'Grave', 'plazo' => 5,
+                'pasos' => ['Detección y reporte', 'Medidas de resguardo inmediatas', 'Entrevistas de investigación', 'Aplicación de medidas formativas', 'Seguimiento y cierre']
             ],
             [
-                'nombre' => 'Agresiones Sexuales',
-                'descripcion' => 'Protocolo de tolerancia cero ante presuntos delitos de carácter sexual.',
-                'pasos' => ['Acogida y Protección Víctima', 'Denuncia Obligatoria (Máx 24h)', 'Notificación a Familias', 'Medidas Administrativas de Resguardo', 'Derivación a Redes de Salud/Legal']
+                'nombre' => 'Agresiones Sexuales y Hechos de Carácter Sexual',
+                'gravedad' => 'Gravísima', 'plazo' => 1,
+                'pasos' => ['Acogida y protección', 'Denuncia obligatoria (24 hrs)', 'Informe a apoderados', 'Derivación a red de salud', 'Medidas de resguardo escolar']
             ],
             [
-                'nombre' => 'Drogas y Alcohol',
-                'descripcion' => 'Procedimiento ante consumo, porte o tráfico de sustancias ilícitas.',
-                'pasos' => ['Detección y Resguardo del Alumno', 'Incautación Segura de Sustancia', 'Comunicación a Apoderados', 'Denuncia (si aplica tráfico)', 'Derivación a Programas de Rehabilitación (SENDA)']
+                'nombre' => 'Conductas Suicidas y Autolesiones',
+                'gravedad' => 'Gravísima', 'plazo' => 1,
+                'pasos' => ['Detección y contención', 'Entrevista con apoderado (Vigilancia)', 'Derivación de urgencia', 'Protocolo de reingreso']
             ],
             [
-                'nombre' => 'Retención Escolar (Embarazo/Paternidad)',
-                'descripcion' => 'Garantizar el derecho a la educación de madres, padres y embarazadas.',
-                'pasos' => ['Acompañamiento e Información', 'Plan de Apoyo Pedagógico Flexible', 'Facilidades de Asistencia y Controles Médicos', 'Resguardo de la Matrícula']
-            ],
-            [
-                'nombre' => 'Identidad de Género (Circular 0768)',
-                'descripcion' => 'Reconocimiento y apoyo a estudiantes trans y de género no binario.',
-                'pasos' => ['Entrevista de Acogida', 'Acuerdo de Uso de Nombre Social', 'Medidas de Apoyo en Infraestructura (Baños)', 'Sensibilización a la Comunidad']
-            ],
-            [
-                'nombre' => 'Discriminación Arbitraria (Ley Zamudio)',
-                'descripcion' => 'Acciones ante actos de exclusión por raza, religión, discapacidad u orientación.',
-                'pasos' => ['Denuncia del Hecho', 'Cese Inmediato de Acto Discriminatorio', 'Medidas Reparatorias y Educativas', 'Sanción según RICE']
-            ],
-            [
-                'nombre' => 'Conductas Suicidas (Ideación/Intento)',
-                'descripcion' => 'Intervención en crisis ante riesgo de vida del estudiante.',
-                'pasos' => ['Detección de Señales de Alerta', 'Contención Psicosocial Inmediata', 'Entrega a Adulto Responsable', 'Derivación Urgente a Red de Salud', 'Plan de Reingreso y Monitoreo']
-            ],
-            [
-                'nombre' => 'Accidentes Escolares',
-                'descripcion' => 'Procedimiento técnico ante lesiones físicas fortuitas.',
-                'pasos' => ['Primeros Auxilios', 'Evaluación de Gravedad y Traslado', 'Llenado de Formulario Seguro Escolar', 'Informe de Investigación de Accidente']
-            ],
-            [
-                'nombre' => 'Vulneración de Derechos (VIF/Abuso Externo)',
-                'descripcion' => 'Rol del colegio como garante ante abusos fuera del establecimiento.',
-                'pasos' => ['Detección de Indicadores', 'Entrevista Reservada (Dupla)', 'Denuncia a Fiscalía o Tribunal de Familia', 'Acompañamiento Escolar']
+                'nombre' => 'Consumo o Tráfico de Drogas y Alcohol',
+                'gravedad' => 'Grave', 'plazo' => 1,
+                'pasos' => ['Detección y resguardo', 'Entrevista apoderado', 'Denuncia (si hay tráfico)', 'Derivación SENDA']
             ],
             [
                 'nombre' => 'Porte de Armas u Objetos Peligrosos',
-                'descripcion' => 'Seguridad comunitaria ante elementos que atentan contra la vida.',
-                'pasos' => ['Aislamiento y Resguardo Seguros', 'Denuncia Inmediata (Carabineros)', 'Notificación a Apoderados', 'Aplicación Aula Segura (Expulsión/Cancelación)']
+                'gravedad' => 'Gravísima', 'plazo' => 1,
+                'pasos' => ['Aislamiento y resguardo comunidad', 'Llamado a Carabineros (133)', 'Retiro de objeto por autoridad', 'Medida disciplinaria inmediata']
+            ],
+            [
+                'nombre' => 'Vulneración de Derechos (VIF o Abuso Externo)',
+                'gravedad' => 'Gravísima', 'plazo' => 2,
+                'pasos' => ['Detección (observación)', 'Entrevista reservada', 'Denuncia Tribunal Familia', 'Seguimiento red externa']
+            ],
+            [
+                'nombre' => 'Accidentes Escolares',
+                'gravedad' => 'Mediana', 'plazo' => 1,
+                'pasos' => ['Primeros Auxilios', 'Llenado Formulario Seguro Escolar', 'Traslado médico', 'Registro en bitácora']
+            ],
+            [
+                'nombre' => 'Identidad de Género (Circular 0768)',
+                'gravedad' => 'Grave', 'plazo' => 5,
+                'pasos' => ['Entrevista acuerdo nombre social', 'Adecuación vestimenta y baños', 'Sensibilización comunidad educativa']
+            ],
+            [
+                'nombre' => 'Discriminación Arbitraria (Ley Zamudio)',
+                'gravedad' => 'Grave', 'plazo' => 5,
+                'pasos' => ['Recepción denuncia', 'Cese de discriminación', 'Entrevistas conciliación', 'Acciones reparación']
+            ],
+            [
+                'nombre' => 'Retención Escolar (Embarazo y Paternidad)',
+                'gravedad' => 'Leve', 'plazo' => 10,
+                'pasos' => ['Apoyo pedagógico', 'Flexibilidad asistencia', 'Vínculo centro salud', 'Protección no discriminación']
+            ],
+            [
+                'nombre' => 'Desastres Naturales y Emergencias (PISE)',
+                'gravedad' => 'Grave', 'plazo' => 1,
+                'pasos' => ['Evacuación según plan', 'Corte suministros', 'Comunicación familias', 'Evaluación daños']
             ],
             [
                 'nombre' => 'Salidas Pedagógicas y Giras',
-                'descripcion' => 'Protocolo de seguridad en actividades fuera del colegio.',
-                'pasos' => ['Planificación y Autorizaciones', 'Nómina y Seguros de Viaje', 'Medidas de Seguridad en Ruta', 'Evaluación Post-Salida']
+                'gravedad' => 'Leve', 'plazo' => 15,
+                'pasos' => ['Autorización apoderados', 'Nómina y seguros', 'Revisión técnica transporte', 'Itinerario']
             ],
             [
-                'nombre' => 'Desastres Naturales y Emergencias',
-                'descripcion' => 'Plan integral de seguridad escolar (PISE).',
-                'pasos' => ['Activación de Alarma', 'Evacuación a Zona de Seguridad', 'Pase de Lista y Control de Alumnos', 'Reincorporación o Retiro por Apoderados']
+                'nombre' => 'Maltrato de Adultos a Estudiantes',
+                'gravedad' => 'Gravísima', 'plazo' => 1,
+                'pasos' => ['Apartar al adulto', 'Denuncia penal', 'Sumario administrativo', 'Apoyo psicológico víctima']
             ],
             [
-                'nombre' => 'Maltrato Adulto a Estudiante',
-                'descripcion' => 'Procedimiento ante abusos de funcionarios hacia alumnos.',
-                'pasos' => ['Denuncia en Dirección', 'Separación Preventiva del Cargo', 'Denuncia Penal (si hay delito)', 'Sumario Administrativo Interno']
+                'nombre' => 'Fallecimiento de Miembro de la Comunidad',
+                'gravedad' => 'Grave', 'plazo' => 1,
+                'pasos' => ['Comunicación oficial', 'Duelo institucional', 'Apoyo compañeros', 'Gestión administrativa']
             ],
             [
-                'nombre' => 'Maltrato Estudiante a Adulto',
-                'descripcion' => 'Protección de los funcionarios ante agresiones de alumnos.',
-                'pasos' => ['Resguardo del Funcionario', 'Investigación de los Hechos', 'Sanción Disciplinaria (RICE)', 'Medidas de Reparación']
+                'nombre' => 'Movilizaciones y Toma de Local',
+                'gravedad' => 'Mediana', 'plazo' => 3,
+                'pasos' => ['Diálogo directiva', 'Resguardo infraestructura', 'Protocolo entrega local', 'Recuperación clases']
             ],
         ];
 
-        foreach ($protocolos as $p) {
-            $proto = Protocol::create([
-                'nombre' => $p['nombre'],
-                'descripcion' => $p['descripcion'],
-                'gravedad' => 'Leve', 
-                'plazo_dias' => 15, // Añadimos el plazo legal estándar para evitar el error
+        foreach ($data as $item) {
+            $p = Protocol::create([
+                'nombre' => $item['nombre'],
+                'gravedad' => $item['gravedad'],
+                'plazo_dias' => $item['plazo']
             ]);
 
-            foreach ($p['pasos'] as $index => $nombrePaso) {
+            foreach ($item['pasos'] as $paso) {
                 ProtocolStep::create([
-                    'protocol_id' => $proto->id,
-                    'name' => $nombrePaso,
-                    'order' => $index + 1,
-                    'is_mandatory' => true
+                    'protocol_id' => $p->id,
+                    'name' => $paso
                 ]);
             }
         }

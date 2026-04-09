@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Incidents;
 
-use App\Filament\Resources\Incidents\Pages\ManageIncidents;
+use App\Filament\Resources\Incidents\Pages;
 use App\Models\Incident;
 use App\Models\Protocol;
 use App\Models\ProtocolStep;
@@ -10,17 +10,19 @@ use Filament\Forms\Form;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Grid;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\ActionGroup;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 
@@ -31,22 +33,24 @@ class IncidentResource extends Resource
     protected static ?string $navigationLabel = 'Incidentes';
     protected static ?string $modelLabel = 'Incidente';
     protected static ?string $pluralModelLabel = 'Incidentes';
+    protected static ?string $slug = 'incidents'; 
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Section::make('Información del Incidente')
+                Section::make('Información General')
                     ->schema([
                         Select::make('student_id')
                             ->relationship('student', 'nombres')
                             ->label('Alumno')
                             ->searchable()
                             ->preload()
-                            ->required(),
+                            ->nullable()
+                            ->helperText('Opcional en caso de protocolos institucionales'),
                         
                         DatePicker::make('fecha_incidente')
-                            ->label('Fecha')
+                            ->label('Fecha del Hecho')
                             ->default(now())
                             ->required(),
 
@@ -54,72 +58,75 @@ class IncidentResource extends Resource
                             ->relationship('protocol', 'nombre')
                             ->label('Protocolo Aplicado')
                             ->live()
-                            ->afterStateUpdated(fn (Set $set) => $set('checklist', []))
-                            ->required(),
+                            ->required()
+                            ->afterStateUpdated(function (Set $set, $state) {
+                                if (!$state) {
+                                    $set('checklist', []);
+                                    return;
+                                }
 
-                        CheckboxList::make('checklist')
-                            ->label('Etapas del Proceso')
-                            ->live() // 🔥 CRUCIAL: Para que las secciones de abajo aparezcan al marcar
-                            ->options(function (Get $get) {
-                                $protocolId = $get('protocol_id');
-                                if (!$protocolId) return [];
-                                return ProtocolStep::where('protocol_id', $protocolId)->pluck('name', 'id');
-                            })
-                            ->visible(fn (Get $get) => $get('protocol_id'))
-                            ->columns(2),
+                                $steps = ProtocolStep::where('protocol_id', $state)->get();
+                                
+                                $set('checklist', $steps->map(fn ($step) => [
+                                    'nombre_etapa' => $step->name,
+                                    'completado' => false,
+                                    'archivo_evidencia' => null,
+                                    'observacion' => '',
+                                ])->toArray());
+                            }),
 
-                        // 🏥 SECCIÓN: FORMULARIO SEGURO ESCOLAR
-                        Section::make('Detalles de Seguro Escolar')
-                            ->description('Información adicional para el formulario de seguro.')
-                            // 🔍 ACTIVACIÓN: Se muestra cuando marcas el ID '3' (Comunicación a Apoderados)
-                            ->visible(fn (Get $get) => in_array('3', $get('checklist') ?? []))
-                            ->statePath('seguro_escolar_data')
+                        Placeholder::make('estado_display')
+                            ->label('Estado Actual')
+                            ->content(fn (?Incident $record): string => $record?->estado ?? 'Abierto')
+                            ->extraAttributes(['class' => 'font-bold text-indigo-600 uppercase']),
+                    ])->columns(2),
+
+                Section::make('Gestión de Protocolo y Evidencias')
+                    ->description('Los pasos se cargan automáticamente según el protocolo seleccionado.')
+                    ->schema([
+                        Repeater::make('checklist')
+                            ->label('Etapas Obligatorias')
                             ->schema([
-                                Grid::make(2)->schema([
-                                    Toggle::make('avisado_apoderado')->label('¿Se avisó al apoderado?')->onColor('success'),
-                                    Toggle::make('traslado_centro')->label('¿Traslado a centro médico?')->onColor('danger'),
-                                ]),
-                                Select::make('centro_asistencial')
-                                    ->label('Lugar de atención')
-                                    ->options([
-                                        'SAPU' => 'SAPU',
-                                        'Hospital' => 'Hospital Regional',
-                                        'Clinica' => 'Clínica Convenio',
-                                        'Mutual' => 'Mutual de Seguridad',
-                                    ]),
-                                Textarea::make('descripcion_lesion')
-                                    ->label('Descripción de la lesión / Primeros Auxilios')
-                                    ->rows(2),
-                            ])->columns(1),
+                                Grid::make(3)->schema([
+                                    TextInput::make('nombre_etapa')
+                                        ->label('Etapa')
+                                        ->disabled() 
+                                        ->dehydrated() 
+                                        ->columnSpan(1),
+                                    
+                                    Toggle::make('completado')
+                                        ->label('¿Realizado?')
+                                        ->onColor('success')
+                                        ->columnSpan(1),
 
-                        // 🔍 SECCIÓN: INFORME DE INVESTIGACIÓN
-                        Section::make('Informe de Investigación de Accidente')
-                            ->description('Datos para el reporte de investigación interna.')
-                            // 🔍 ACTIVACIÓN: Se muestra cuando marcas el ID '4' (Investigación y Descargos)
-                            ->visible(fn (Get $get) => in_array('4', $get('checklist') ?? []))
-                            ->statePath('informe_accidente_data')
-                            ->schema([
-                                Grid::make(2)->schema([
-                                    Textarea::make('causas')->label('Causas del accidente'),
-                                    Textarea::make('medidas')->label('Medidas preventivas tomadas'),
+                                    FileUpload::make('archivo_evidencia')
+                                        ->label('Documento (PDF/Acta)')
+                                        ->directory('evidencias-incidentes')
+                                        ->preserveFilenames()
+                                        ->openable()
+                                        ->downloadable()
+                                        ->columnSpan(1),
                                 ]),
-                                TextInput::make('testigos')->label('Testigos presentes'),
-                            ]),
 
+                                Textarea::make('observacion')
+                                    ->label('Observaciones de la etapa')
+                                    ->rows(1)
+                                    ->columnSpanFull(),
+                            ])
+                            ->addable(false)
+                            ->reorderable(false)
+                            ->itemLabel(fn (array $state): ?string => $state['nombre_etapa'] ?? 'Etapa')
+                            ->collapsible()
+                            
+                    ]),
+
+                Section::make('Narrativa de los Hechos')
+                    ->schema([
                         Textarea::make('descripcion')
-                            ->label('Descripción de los hechos')
+                            ->label('Descripción detallada')
                             ->required()
                             ->columnSpanFull(),
-
-                        Select::make('estado')
-                            ->options([
-                                'Abierto' => 'Abierto',
-                                'En Proceso' => 'En Proceso',
-                                'Cerrado' => 'Cerrado',
-                            ])
-                            ->default('Abierto')
-                            ->required(),
-                    ])->columns(2)
+                    ])
             ]);
     }
 
@@ -127,40 +134,53 @@ class IncidentResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('fecha_incidente')->label('Fecha')->date('d-m-Y')->sortable(),
-                TextColumn::make('student.nombres')->label('Alumno')->searchable(),
-                TextColumn::make('protocol.nombre')->label('Protocolo'),
+                TextColumn::make('fecha_incidente')
+                    ->label('Fecha')
+                    ->date('d-m-Y')
+                    ->sortable(),
+
+                TextColumn::make('student.nombres')
+                    ->label('Alumno')
+                    ->default('Emergencia Institucional')
+                    ->description(fn (Incident $record): string => $record->student ? "RUT: {$record->student->rut}" : "General"),
+
+                TextColumn::make('protocol.nombre')
+                    ->label('Protocolo')
+                    ->limit(30),
+
+                TextColumn::make('progreso')
+                    ->label('Documentación')
+                    ->getStateUsing(function (Incident $record): string {
+                        $total = count($record->checklist ?? []);
+                        if ($total === 0) return "Sin Etapas";
+                        $conArchivo = collect($record->checklist)->filter(fn($item) => !empty($item['archivo_evidencia']))->count();
+                        return "{$conArchivo} / {$total} Archivos";
+                    })
+                    ->badge()
+                    ->color(fn ($state) => str_contains($state, '0 /') ? 'danger' : 'success'),
+
                 TextColumn::make('estado')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'Abierto' => 'danger',
-                        'En Proceso' => 'warning',
-                        'Cerrado' => 'success',
+                    ->color(fn (string $state): string => match (strtolower($state)) {
+                        'abierto' => 'danger',
+                        'en proceso' => 'warning',
+                        'cerrado' => 'success',
                         default => 'gray',
                     }),
             ])
             ->actions([
-                Action::make('pdf')
-                    ->label('Reporte')
-                    ->icon('heroicon-o-document-arrow-down')
-                    ->color('danger')
-                    ->url(fn (Incident $record) => url('/incidente/'.$record->id.'/print'))
-                    ->openUrlInNewTab(),
-                EditAction::make(),
-                DeleteAction::make(),
+                ActionGroup::make([
+                    EditAction::make(),
+                    DeleteAction::make(),
+                ])
             ]);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => ManageIncidents::route('/'),
-        ];
-    }
-    public static function getRelations(): array
-    {
-        return [
-            \App\Filament\Resources\Incidents\RelationManagers\FollowUpsRelationManager::class,
+            'index' => Pages\ListIncidents::route('/'),
+            'edit' => Pages\EditIncident::route('/{record}/edit'),
         ];
     }
 }
