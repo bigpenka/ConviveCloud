@@ -4,92 +4,100 @@ namespace App\Filament\Resources\Incidents;
 
 use App\Filament\Resources\Incidents\Pages\ManageIncidents;
 use App\Models\Incident;
-use BackedEnum;
+use Filament\Forms\Form;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\Section;
 use Filament\Resources\Resource;
+use Filament\Tables\Table;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Actions\DeleteAction;
+use Filament\Tables\Actions\Action;
 
 class IncidentResource extends Resource
 {
     protected static ?string $model = Incident::class;
-
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-exclamation-triangle';
-
+    
+    // CORRECCIÓN: En Filament 3 solo se usa ?string
+    protected static ?string $navigationIcon = 'heroicon-o-exclamation-triangle';
+    
     protected static ?string $navigationLabel = 'Incidentes';
     protected static ?string $modelLabel = 'Incidente';
     protected static ?string $pluralModelLabel = 'Incidentes';
 
-    public static function form(\Filament\Schemas\Schema $schema): \Filament\Schemas\Schema
-    {
-        return $schema->components([
-            \Filament\Forms\Components\Select::make('student_id')
-                ->relationship('student', 'nombres')
-                ->label('Alumno Involucrado')
-                ->searchable()
-                ->preload()
-                ->required(),
+    public static function form(Form $form): Form
+{
+    return $form
+        ->schema([
+            Section::make('Información del Incidente')
+                ->schema([
+                    Select::make('student_id')
+                        ->relationship('student', 'nombres')
+                        ->label('Alumno')
+                        ->searchable()
+                        ->preload()
+                        ->required(),
+                    
+                    DatePicker::make('fecha_incidente')
+                        ->label('Fecha')
+                        ->default(now())
+                        ->required(),
 
-            \Filament\Forms\Components\DatePicker::make('fecha_incidente')
-                ->label('Fecha del Incidente')
-                ->default(now())
-                ->required(),
+                    Select::make('protocol_id')
+                        ->relationship('protocol', 'nombre')
+                        ->label('Protocolo Aplicado')
+                        ->live()
+                        // 🔥 ESTO ES LO NUEVO: Limpia el checklist si cambias de protocolo
+                        ->afterStateUpdated(fn (\Filament\Forms\Set $set) => $set('checklist', []))
+                        ->required(),
 
-            \Filament\Forms\Components\Select::make('protocol_id')
-                ->relationship('protocol', 'nombre')
-                ->label('Protocolo Aplicado')
-                ->live()
-                ->required(),
+                    CheckboxList::make('checklist')
+                        ->label('Etapas del Proceso')
+                        // Agregamos \Filament\Forms\Get para evitar errores de tipado
+                        ->options(function (\Filament\Forms\Get $get) {
+                            $protocolId = $get('protocol_id');
+                            if (!$protocolId) return [];
+                            return \App\Models\ProtocolStep::where('protocol_id', $protocolId)->pluck('name', 'id');
+                        })
+                        ->visible(fn (\Filament\Forms\Get $get) => $get('protocol_id'))
+                        ->columns(2),
 
-            \Filament\Forms\Components\CheckboxList::make('checklist')
-                ->label('Etapas del Proceso')
-                ->options(function ($get) {
-                    $protocolId = $get('protocol_id');
-                    if (!$protocolId) return [];
-                    return \App\Models\Incident::find($protocolId)?->protocol?->steps->pluck('name', 'id') ?? [];
-                })
-                ->visible(fn ($get) => $get('protocol_id'))
-                ->live(),
+                    Textarea::make('descripcion')
+                        ->label('Descripción de los hechos')
+                        ->required()
+                        ->columnSpanFull(),
 
-            \Filament\Forms\Components\Textarea::make('descripcion')
-                ->label('Descripción Detallada')
-                ->required()
-                ->columnSpanFull(),
-
-            \Filament\Forms\Components\Select::make('estado')
-                ->label('Estado')
-                ->options([
-                    'Abierto' => 'Abierto',
-                    'En Proceso' => 'En Proceso',
-                    'Cerrado' => 'Cerrado',
-                ])
-                ->default('Abierto')
-                ->required(),
+                    Select::make('estado')
+                        ->options([
+                            'Abierto' => 'Abierto',
+                            'En Proceso' => 'En Proceso',
+                            'Cerrado' => 'Cerrado',
+                        ])
+                        ->default('Abierto')
+                        ->required(),
+                ])->columns(2)
         ]);
-    }
+}
 
-    public static function table(\Filament\Tables\Table $table): \Filament\Tables\Table
+    public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                \Filament\Tables\Columns\TextColumn::make('fecha_incidente')
+                TextColumn::make('fecha_incidente')
                     ->label('Fecha')
-                    ->date('d-m-Y'),
+                    ->date('d-m-Y')
+                    ->sortable(),
                 
-                \Filament\Tables\Columns\TextColumn::make('student.nombres')
-                    ->label('Alumno'),
+                TextColumn::make('student.nombres')
+                    ->label('Alumno')
+                    ->searchable(),
 
-                // Botón PDF (Indestructible por ser HTML puro)
-                \Filament\Tables\Columns\TextColumn::make('reporte')
-                    ->label('Reporte')
-                    ->html()
-                    ->formatStateUsing(fn ($record) => "
-                        <a href='/incidente/{$record->id}/print' target='_blank' 
-                           style='background-color: #dc2626; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 11px;'>
-                           PDF
-                        </a>
-                    "),
-
-                \Filament\Tables\Columns\TextColumn::make('estado')
+                TextColumn::make('estado')
                     ->badge()
-                    ->color(fn ($state) => match ($state) {
+                    ->color(fn (string $state): string => match ($state) {
                         'Abierto' => 'danger',
                         'En Proceso' => 'warning',
                         'Cerrado' => 'success',
@@ -97,14 +105,16 @@ class IncidentResource extends Resource
                     }),
             ])
             ->actions([
-                // Rutas absolutas para evitar el error "Class not found"
-                \Filament\Tables\Actions\EditAction::make(),
-                \Filament\Tables\Actions\DeleteAction::make(),
-            ])
-            ->bulkActions([
-                \Filament\Tables\Actions\BulkActionGroup::make([
-                    \Filament\Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                // Botón PDF funcional para Filament 3
+                Action::make('pdf')
+                    ->label('Reporte')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('danger')
+                    ->url(fn (Incident $record) => url('/incidente/'.$record->id.'/print'))
+                    ->openUrlInNewTab(),
+
+                EditAction::make(),
+                DeleteAction::make(),
             ]);
     }
 

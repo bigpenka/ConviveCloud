@@ -4,35 +4,33 @@ namespace App\Filament\Resources\Protocols;
 
 use App\Filament\Resources\Protocols\Pages\ManageProtocols;
 use App\Models\Protocol;
-use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
+use Filament\Forms\Form;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
-use Filament\Schemas\Schema; // Usando Schema para evitar incompatibilidades
 use Filament\Resources\Resource;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Actions\DeleteAction;
+use Filament\Tables\Actions\BulkActionGroup;
+use Filament\Tables\Actions\DeleteBulkAction;
 
 class ProtocolResource extends Resource
 {
     protected static ?string $model = Protocol::class;
 
-    // EL FIX DEL ERROR: Tipado estricto exigido por Filament
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
+    // EL FIX: En Filament 3 solo se acepta ?string
+    protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
     protected static ?string $navigationLabel = 'Protocolos';
     protected static ?string $modelLabel = 'Protocolo';
     protected static ?string $pluralModelLabel = 'Protocolos';
-
     protected static ?string $recordTitleAttribute = 'nombre';
 
-    public static function form(Schema $schema): Schema
+    public static function form(Form $form): Form
     {
-        return $schema
-            ->components([
+        return $form
+            ->schema([
                 TextInput::make('nombre')
                     ->label('Nombre del Protocolo')
                     ->required()
@@ -59,7 +57,6 @@ class ProtocolResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->recordTitleAttribute('nombre')
             ->columns([
                 TextColumn::make('nombre')
                     ->label('Nombre')
