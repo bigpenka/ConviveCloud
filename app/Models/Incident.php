@@ -42,4 +42,9 @@ class Incident extends Model
     {
         return $this->belongsTo(Protocol::class);
     }
+    public function followUps()
+{
+    return $this->hasMany(IncidentFollowUp::class);
+}
+
 }
