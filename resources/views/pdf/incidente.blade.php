@@ -2,148 +2,114 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reporte de Incidente - ConviveCloud</title>
+    <title>Acta de Incidente #{{ $incidente->id }}</title>
     <style>
-        body { font-family: 'Helvetica', 'Arial', sans-serif; margin: 20px; color: #333; line-height: 1.5; }
-        .header { text-align: center; border-bottom: 3px solid #1a202c; padding-bottom: 10px; margin-bottom: 20px; }
-        .header h2 { margin: 0; text-transform: uppercase; color: #1a202c; }
-        .header p { margin: 5px 0; font-size: 14px; color: #4a5568; }
+        /* Estilos compatibles con DOMPDF */
+        body { font-family: 'Helvetica', 'Arial', sans-serif; font-size: 13px; color: #333; line-height: 1.5; }
+        .header { text-align: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 20px; }
+        .header h1 { margin: 0; color: #1e3a8a; font-size: 22px; text-transform: uppercase; }
+        .header p { margin: 5px 0 0; color: #666; font-size: 12px; }
         
-        .section-title { background-color: #edf2f7; padding: 8px; font-size: 14px; font-weight: bold; border-left: 4px solid #2d3748; margin-top: 15px; margin-bottom: 10px; text-transform: uppercase; }
+        .section-title { background-color: #1e3a8a; color: #ffffff; padding: 8px 10px; font-weight: bold; margin-top: 25px; margin-bottom: 10px; font-size: 14px; text-transform: uppercase; }
         
-        .info-grid { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-        .info-grid td { padding: 6px; border: 1px solid #e2e8f0; font-size: 12px; }
-        .label { font-weight: bold; background-color: #f8fafc; width: 25%; }
-
-        /* Estilo para las tablas de datos JSON */
-        .json-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; background-color: #fff; }
-        .json-table td { padding: 8px; border: 1px solid #e2e8f0; font-size: 12px; vertical-align: top; }
-        .json-label { font-weight: bold; color: #2d3748; background-color: #f1f5f9; width: 30%; }
-
+        .table-info { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        .table-info th, .table-info td { padding: 8px; border: 1px solid #cbd5e1; text-align: left; }
+        .table-info th { background-color: #f1f5f9; width: 30%; font-weight: bold; color: #475569; }
+        
+        .content-box { border: 1px solid #cbd5e1; padding: 15px; background-color: #f8fafc; min-height: 80px; text-align: justify; }
+        
         .checklist-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .checklist-table th { background-color: #2d3748; color: white; padding: 8px; font-size: 11px; text-align: left; }
-        .checklist-table td { padding: 6px; border: 1px solid #cbd5e0; font-size: 11px; }
-        .status-check { color: #2f855a; font-weight: bold; text-align: center; width: 20%; }
-
-        .descripcion-box { border: 1px solid #e2e8f0; padding: 12px; min-height: 60px; font-size: 12px; background-color: #fff; white-space: pre-wrap; }
+        .checklist-table th, .checklist-table td { padding: 6px; border-bottom: 1px solid #e2e8f0; text-align: left; font-size: 12px; }
+        .badge-yes { color: #16a34a; font-weight: bold; }
+        .badge-no { color: #dc2626; font-weight: bold; }
         
-        .footer { margin-top: 40px; text-align: center; font-size: 10px; color: #718096; border-top: 1px solid #e2e8f0; padding-top: 10px; }
-        .signatures { margin-top: 40px; width: 100%; }
-        .signatures td { text-align: center; width: 50%; padding-top: 30px; font-size: 12px; }
-        
-        @media print { .no-print { display: none; } }
+        .footer { text-align: center; margin-top: 50px; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 15px; }
+        .signatures { width: 100%; margin-top: 60px; text-align: center; }
+        .signatures td { padding-top: 40px; border-top: 1px solid #333; width: 45%; }
+        .spacer { width: 10%; }
     </style>
 </head>
 <body>
+
     <div class="header">
-        <h2>Ficha de Incidente de Convivencia Escolar</h2>
-        <p>Establecimiento Educacional - Plataforma ConviveCloud</p>
-        <p><strong>Protocolo bajo Normativa Circular 482 y RICE</strong></p>
+        <h1>Reporte Oficial de Incidente</h1>
+        <p>Institución: <strong>{{ $incidente->school->name ?? 'ConviveCloud' }}</strong></p>
+        <p>Generado el: {{ now()->format('d/m/Y H:i') }} | Acta N°: {{ str_pad($incidente->id, 5, '0', STR_PAD_LEFT) }}</p>
     </div>
 
-    <div class="section-title">I. IDENTIFICACIÓN DEL INCIDENTE</div>
-    <table class="info-grid">
+    <div class="section-title">Información General</div>
+    <table class="table-info">
         <tr>
-            <td class="label">Alumno Involucrado:</td>
-            <td>{{ $incidente->student->nombres ?? 'N/A' }} {{ $incidente->student->apellidos ?? '' }}</td>
-            <td class="label">RUT:</td>
-            <td>{{ $incidente->student->rut ?? 'N/A' }}</td>
-        </tr>
-        <tr>
-            <td class="label">Fecha del Incidente:</td>
+            <th>Fecha del Hecho:</th>
             <td>{{ \Carbon\Carbon::parse($incidente->fecha_incidente)->format('d-m-Y') }}</td>
-            <td class="label">Estado del Caso:</td>
-            <td><strong>{{ strtoupper($incidente->estado) }}</strong></td>
         </tr>
         <tr>
-            <td class="label">Protocolo Aplicado:</td>
-            <td colspan="3">{{ $incidente->protocol->nombre ?? 'N/A' }}</td>
+            <th>Estudiante Involucrado:</th>
+            <td>
+                @if($incidente->student)
+                    {{ $incidente->student->nombres }} (RUT: {{ $incidente->student->rut }})
+                @else
+                    Incidente General / Institucional
+                @endif
+            </td>
+        </tr>
+        <tr>
+            <th>Protocolo Aplicado:</th>
+            <td>{{ $incidente->protocol->nombre ?? 'Sin protocolo específico' }}</td>
+        </tr>
+        <tr>
+            <th>Estado del Caso:</th>
+            <td style="text-transform: uppercase; font-weight: bold;">{{ $incidente->estado ?? 'Abierto' }}</td>
         </tr>
     </table>
 
-    <div class="section-title">II. DESCRIPCIÓN DE LOS HECHOS</div>
-    <div class="descripcion-box">{{ $incidente->descripcion }}</div>
+    <div class="section-title">Narrativa de los Hechos</div>
+    <div class="content-box">
+        {!! nl2br(e($incidente->descripcion)) !!}
+    </div>
 
-    {{-- 🔥 SECCIÓN DINÁMICA: SEGURO ESCOLAR --}}
-    @if(!empty($incidente->seguro_escolar_data))
-        <div class="section-title">III. DETALLES DE SEGURO ESCOLAR</div>
-        <table class="json-table">
-            <tr>
-                <td class="json-label">¿Avisado al apoderado?</td>
-                <td>{{ ($incidente->seguro_escolar_data['avisado_apoderado'] ?? false) ? 'SÍ' : 'NO' }}</td>
-                <td class="json-label">¿Traslado a centro médico?</td>
-                <td>{{ ($incidente->seguro_escolar_data['traslado_centro'] ?? false) ? 'SÍ' : 'NO' }}</td>
-            </tr>
-            <tr>
-                <td class="json-label">Lugar de atención:</td>
-                <td colspan="3">{{ $incidente->seguro_escolar_data['centro_asistencial'] ?? 'No especificado' }}</td>
-            </tr>
-            <tr>
-                <td class="json-label">Descripción de lesión:</td>
-                <td colspan="3">{{ $incidente->seguro_escolar_data['descripcion_lesion'] ?? 'Sin descripción adicional' }}</td>
-            </tr>
-        </table>
-    @endif
-
-    {{-- 🔥 SECCIÓN DINÁMICA: INVESTIGACIÓN --}}
-    @if(!empty($incidente->informe_accidente_data))
-        <div class="section-title">IV. INFORME DE INVESTIGACIÓN</div>
-        <table class="json-table">
-            <tr>
-                <td class="json-label">Causas del accidente:</td>
-                <td colspan="3">{{ $incidente->informe_accidente_data['causas'] ?? 'Sin registro' }}</td>
-            </tr>
-            <tr>
-                <td class="json-label">Medidas preventivas:</td>
-                <td colspan="3">{{ $incidente->informe_accidente_data['medidas'] ?? 'Sin registro' }}</td>
-            </tr>
-            <tr>
-                <td class="json-label">Testigos presenciales:</td>
-                <td colspan="3">{{ $incidente->informe_accidente_data['testigos'] ?? 'No se registran testigos' }}</td>
-            </tr>
-        </table>
-    @endif
-
-    <div class="section-title">V. REGISTRO DE ACTUACIÓN (DEBIDO PROCESO)</div>
-    <table class="checklist-table">
-        <thead>
-            <tr>
-                <th>ETAPA / ACCIÓN EJECUTADA</th>
-                <th>ESTADO</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($pasosMarcados as $paso)
+    <div class="section-title">Progreso del Protocolo</div>
+    @if(is_array($incidente->checklist) && count($incidente->checklist) > 0)
+        <table class="checklist-table">
+            <thead>
                 <tr>
-                    <td>{{ $paso->name }}</td>
-                    <td class="status-check">CUMPLIDO</td>
+                    <th style="width: 50%;">Etapa del Protocolo</th>
+                    <th style="width: 20%;">¿Realizado?</th>
+                    <th style="width: 30%;">Observación</th>
                 </tr>
-            @empty
-                <tr>
-                    <td colspan="2" style="text-align: center; color: #a0aec0;">No se registraron etapas marcadas.</td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach($incidente->checklist as $item)
+                    <tr>
+                        <td>{{ $item['nombre_etapa'] ?? 'Etapa sin nombre' }}</td>
+                        <td>
+                            @if(isset($item['completado']) && $item['completado'])
+                                <span class="badge-yes">✓ Completado</span>
+                            @else
+                                <span class="badge-no">✗ Pendiente</span>
+                            @endif
+                        </td>
+                        <td>{{ $item['observacion'] ?? '-' }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @else
+        <p style="font-size: 12px; color: #666; font-style: italic;">No hay etapas documentadas para este incidente.</p>
+    @endif
 
     <table class="signatures">
         <tr>
-            <td>
-                ________________________________<br>
-                <strong>Firma Encargado Convivencia</strong><br>
-                Timbre Establecimiento
-            </td>
-            <td>
-                ________________________________<br>
-                <strong>Firma Apoderado / Alumno</strong><br>
-                RUN: __________________
-            </td>
+            <td>Firma Encargado de Convivencia</td>
+            <td class="spacer"></td>
+            <td>Firma Apoderado / Involucrado</td>
         </tr>
     </table>
 
     <div class="footer">
-        <p>Documento generado de forma electrónica por ConviveCloud el {{ now()->format('d/m/Y \a \l\a\s H:i') }} hrs.</p>
-        <p>Copia fiel del registro digital. La manipulación de este documento es sancionada bajo el reglamento interno.</p>
+        Documento confidencial generado a través de ConviveCloud.<br>
+        Uso exclusivo del equipo de Convivencia Escolar y Dirección.
     </div>
+
 </body>
 </html>

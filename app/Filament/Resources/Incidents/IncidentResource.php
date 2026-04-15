@@ -25,6 +25,8 @@ use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\ActionGroup;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Filament\Tables\Actions\Action;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class IncidentResource extends Resource
 {
@@ -171,6 +173,23 @@ class IncidentResource extends Resource
             ->actions([
                 ActionGroup::make([
                     EditAction::make(),
+                    
+                    // 🔥 AQUÍ ESTÁ EL BOTÓN DE PDF INTEGRADO
+                    Action::make('descargar_pdf')
+                        ->label('Descargar Acta (PDF)')
+                        ->icon('heroicon-o-document-arrow-down')
+                        ->color('danger')
+                        ->action(function ($record) {
+                            $pdf = Pdf::loadView('pdf.incidente', [
+                                'incidente' => $record
+                            ]);
+                            
+                            return response()->streamDownload(
+                                fn () => print($pdf->output()), 
+                                "Acta-Incidente-{$record->id}.pdf"
+                            );
+                        }),
+                        
                     DeleteAction::make(),
                 ])
             ]);
