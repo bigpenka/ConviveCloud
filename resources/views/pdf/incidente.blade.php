@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>Acta de Incidente #{{ $incidente->id }}</title>
     <style>
-        /* Estilos compatibles con DOMPDF */
         body { font-family: 'Helvetica', 'Arial', sans-serif; font-size: 13px; color: #333; line-height: 1.5; }
         .header { text-align: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 20px; }
         .header h1 { margin: 0; color: #1e3a8a; font-size: 22px; text-transform: uppercase; }
@@ -16,12 +15,16 @@
         .table-info th, .table-info td { padding: 8px; border: 1px solid #cbd5e1; text-align: left; }
         .table-info th { background-color: #f1f5f9; width: 30%; font-weight: bold; color: #475569; }
         
-        .content-box { border: 1px solid #cbd5e1; padding: 15px; background-color: #f8fafc; min-height: 80px; text-align: justify; }
+        .content-box { border: 1px solid #cbd5e1; padding: 15px; background-color: #f8fafc; min-height: 80px; text-align: justify; margin-bottom: 15px;}
         
         .checklist-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .checklist-table th, .checklist-table td { padding: 6px; border-bottom: 1px solid #e2e8f0; text-align: left; font-size: 12px; }
+        .checklist-table th, .checklist-table td { padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: left; font-size: 12px; vertical-align: top; }
         .badge-yes { color: #16a34a; font-weight: bold; }
         .badge-no { color: #dc2626; font-weight: bold; }
+
+        /* Estilos para los formularios digitales incrustados */
+        .form-digital { background-color: #f1f5f9; padding: 10px; border-left: 3px solid #3b82f6; margin-top: 8px; font-size: 11px; }
+        .form-digital strong { color: #1e40af; }
         
         .footer { text-align: center; margin-top: 50px; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 15px; }
         .signatures { width: 100%; margin-top: 60px; text-align: center; }
@@ -68,28 +71,45 @@
         {!! nl2br(e($incidente->descripcion)) !!}
     </div>
 
-    <div class="section-title">Progreso del Protocolo</div>
+    <div class="section-title">Progreso y Formularios Digitales</div>
     @if(is_array($incidente->checklist) && count($incidente->checklist) > 0)
         <table class="checklist-table">
             <thead>
                 <tr>
-                    <th style="width: 50%;">Etapa del Protocolo</th>
-                    <th style="width: 20%;">¿Realizado?</th>
-                    <th style="width: 30%;">Observación</th>
+                    <th style="width: 25%;">Etapa</th>
+                    <th style="width: 15%;">Estado</th>
+                    <th style="width: 60%;">Registro / Evidencia Digital</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($incidente->checklist as $item)
                     <tr>
-                        <td>{{ $item['nombre_etapa'] ?? 'Etapa sin nombre' }}</td>
+                        <td><strong>{{ $item['nombre_etapa'] ?? 'Etapa' }}</strong></td>
                         <td>
                             @if(isset($item['completado']) && $item['completado'])
-                                <span class="badge-yes">✓ Completado</span>
+                                <span class="badge-yes">✓ Realizado</span>
                             @else
                                 <span class="badge-no">✗ Pendiente</span>
                             @endif
                         </td>
-                        <td>{{ $item['observacion'] ?? '-' }}</td>
+                        <td>
+                            @if(($item['nombre_etapa'] ?? '') === 'Llenado Formulario Seguro Escolar')
+                                <div class="form-digital">
+                                    <p><strong>Centro Asistencial:</strong> {{ $item['centro_medico'] ?? 'No registrado' }}</p>
+                                    <p><strong>Hora del Accidente:</strong> {{ $item['hora_accidente'] ?? 'No registrada' }}</p>
+                                    <p><strong>Detalle de Lesión:</strong> {!! nl2br(e($item['tipo_lesion'] ?? 'Sin detalles')) !!}</p>
+                                </div>
+                            
+                            @elseif(($item['nombre_etapa'] ?? '') === 'Entrevista Estudiante')
+                                <div class="form-digital">
+                                    <p><strong>Relato:</strong> {!! nl2br(e($item['relato_estudiante'] ?? 'No registrado')) !!}</p>
+                                    <p><strong>Acuerdos:</strong> {!! nl2br(e($item['acuerdos_entrevista'] ?? 'No registrados')) !!}</p>
+                                </div>
+                            
+                            @else
+                                {{ $item['observacion'] ?? 'Sin observaciones.' }}
+                            @endif
+                        </td>
                     </tr>
                 @endforeach
             </tbody>
@@ -107,7 +127,7 @@
     </table>
 
     <div class="footer">
-        Documento confidencial generado a través de ConviveCloud.<br>
+        Documento digitalizado generado a través de ConviveCloud (Iniciativa Cero Papel).<br>
         Uso exclusivo del equipo de Convivencia Escolar y Dirección.
     </div>
 

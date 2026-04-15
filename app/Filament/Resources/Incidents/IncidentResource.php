@@ -17,6 +17,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Fieldset; // 🔥 IMPORTANTE
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
@@ -74,6 +75,22 @@ class IncidentResource extends Resource
                                     'completado' => false,
                                     'archivo_evidencia' => null,
                                     'observacion' => '',
+                                    // 🔥 Inicializamos TODOS los posibles campos para evitar errores de llave no definida en JSON
+                                    'centro_medico' => null,
+                                    'hora_accidente' => null,
+                                    'tipo_lesion' => null,
+                                    'asistencia_apoderado' => null,
+                                    'nombre_entrevistado' => null,
+                                    'relato_estudiante' => null,
+                                    'acuerdos_entrevista' => null,
+                                    'institucion_denuncia' => null,
+                                    'n_parte' => null,
+                                    'fecha_denuncia' => null,
+                                    'detalle_denuncia' => null,
+                                    'tipo_medida' => null,
+                                    'fecha_inicio_medida' => null,
+                                    'fecha_termino_medida' => null,
+                                    'fundamento_medida' => null,
                                 ])->toArray());
                             }),
 
@@ -84,7 +101,7 @@ class IncidentResource extends Resource
                     ])->columns(2),
 
                 Section::make('Gestión de Protocolo y Evidencias')
-                    ->description('Los pasos se cargan automáticamente según el protocolo seleccionado.')
+                    ->description('Complete los formularios digitales. Solo suba documentos si provienen de fuentes externas (ej: certificado médico, denuncia externa).')
                     ->schema([
                         Repeater::make('checklist')
                             ->label('Etapas Obligatorias')
@@ -102,7 +119,7 @@ class IncidentResource extends Resource
                                         ->columnSpan(1),
 
                                     FileUpload::make('archivo_evidencia')
-                                        ->label('Documento (PDF/Acta)')
+                                        ->label('Documento Externo (Opcional)')
                                         ->directory('evidencias-incidentes')
                                         ->preserveFilenames()
                                         ->openable()
@@ -110,10 +127,86 @@ class IncidentResource extends Resource
                                         ->columnSpan(1),
                                 ]),
 
+                                // 🔥 1. FORMULARIO DIGITAL: SALUD Y ACCIDENTES
+                                Fieldset::make('Detalles de Atención Médica / Derivación')
+                                    ->schema([
+                                        TextInput::make('centro_medico')->label('Centro Asistencial'),
+                                        TextInput::make('hora_accidente')->label('Hora exacta')->type('time'),
+                                        Textarea::make('tipo_lesion')->label('Detalle de la lesión o estado')->columnSpanFull(),
+                                    ])
+                                    ->visible(fn (Get $get) => in_array($get('nombre_etapa'), [
+                                        'Llenado Formulario Seguro Escolar', 
+                                        'Derivación a red de salud', 
+                                        'Derivación de urgencia', 
+                                        'Derivación SENDA'
+                                    ])),
+
+                                // 🔥 2. FORMULARIO DIGITAL: ENTREVISTAS (Cubre Agresión Sexual, Bullying, etc)
+                                Fieldset::make('Acta de Entrevista / Informe')
+                                    ->schema([
+                                        Select::make('asistencia_apoderado')->label('¿Asistió el apoderado?')
+                                            ->options(['Sí' => 'Sí', 'No' => 'No', 'No aplica' => 'No aplica']),
+                                        TextInput::make('nombre_entrevistado')->label('Nombre del entrevistado(s)'),
+                                        Textarea::make('relato_estudiante')->label('Relato / Temas Tratados')->rows(3)->columnSpanFull(),
+                                        Textarea::make('acuerdos_entrevista')->label('Acuerdos y Compromisos')->rows(2)->columnSpanFull(),
+                                    ])
+                                    ->visible(fn (Get $get) => in_array($get('nombre_etapa'), [
+                                        'Entrevistas de investigación', 
+                                        'Informe a apoderados', 
+                                        'Entrevista con apoderado (Vigilancia)', 
+                                        'Entrevista apoderado', 
+                                        'Entrevista reservada', 
+                                        'Entrevista acuerdo nombre social', 
+                                        'Entrevistas conciliación'
+                                    ])),
+
+                                // 🔥 3. FORMULARIO DIGITAL: DENUNCIAS INSTITUCIONALES
+                                Fieldset::make('Registro de Denuncia Externa')
+                                    ->schema([
+                                        Select::make('institucion_denuncia')->label('Institución Receptora')
+                                            ->options(['Carabineros' => 'Carabineros (133)', 'PDI' => 'PDI (134)', 'Fiscalía' => 'Fiscalía', 'Tribunal de Familia' => 'Tribunal de Familia']),
+                                        TextInput::make('n_parte')->label('N° de Parte / RUC'),
+                                        DatePicker::make('fecha_denuncia')->label('Fecha de denuncia'),
+                                        Textarea::make('detalle_denuncia')->label('Hechos denunciados')->columnSpanFull(),
+                                    ])
+                                    ->visible(fn (Get $get) => in_array($get('nombre_etapa'), [
+                                        'Denuncia obligatoria (24 hrs)', 
+                                        'Denuncia (si hay tráfico)', 
+                                        'Llamado a Carabineros (133)', 
+                                        'Denuncia Tribunal Familia', 
+                                        'Denuncia penal'
+                                    ])),
+
+                                // 🔥 4. FORMULARIO DIGITAL: MEDIDAS
+                                Fieldset::make('Registro de Medidas Aplicadas')
+                                    ->schema([
+                                        Select::make('tipo_medida')->label('Tipo de Medida')
+                                            ->options(['Formativa' => 'Formativa / Pedagógica', 'Disciplinaria Leve' => 'Disciplinaria Leve', 'Suspensión' => 'Suspensión', 'Condicionalidad' => 'Condicionalidad', 'Cancelación Matrícula/Expulsión' => 'Expulsión']),
+                                        DatePicker::make('fecha_inicio_medida')->label('Fecha de Inicio'),
+                                        DatePicker::make('fecha_termino_medida')->label('Fecha de Término (Si aplica)'),
+                                        Textarea::make('fundamento_medida')->label('Fundamento de la medida según RICE')->columnSpanFull(),
+                                    ])
+                                    ->visible(fn (Get $get) => in_array($get('nombre_etapa'), [
+                                        'Aplicación de medidas formativas', 
+                                        'Medidas de resguardo inmediatas', 
+                                        'Medidas de resguardo escolar', 
+                                        'Medida disciplinaria inmediata', 
+                                        'Cese de discriminación',
+                                        'Retiro de objeto por autoridad'
+                                    ])),
+
+                                // CAJA DE OBSERVACIONES NORMAL
                                 Textarea::make('observacion')
-                                    ->label('Observaciones de la etapa')
-                                    ->rows(1)
-                                    ->columnSpanFull(),
+                                    ->label('Observaciones de la etapa (Uso General)')
+                                    ->rows(2)
+                                    ->columnSpanFull()
+                                    // Se oculta si la etapa cayó en alguno de los Fieldsets de arriba
+                                    ->hidden(fn (Get $get) => in_array($get('nombre_etapa'), [
+                                        'Llenado Formulario Seguro Escolar', 'Derivación a red de salud', 'Derivación de urgencia', 'Derivación SENDA',
+                                        'Entrevistas de investigación', 'Informe a apoderados', 'Entrevista con apoderado (Vigilancia)', 'Entrevista apoderado', 'Entrevista reservada', 'Entrevista acuerdo nombre social', 'Entrevistas conciliación',
+                                        'Denuncia obligatoria (24 hrs)', 'Denuncia (si hay tráfico)', 'Llamado a Carabineros (133)', 'Denuncia Tribunal Familia', 'Denuncia penal',
+                                        'Aplicación de medidas formativas', 'Medidas de resguardo inmediatas', 'Medidas de resguardo escolar', 'Medida disciplinaria inmediata', 'Cese de discriminación', 'Retiro de objeto por autoridad'
+                                    ])),
                             ])
                             ->addable(false)
                             ->reorderable(false)
@@ -174,7 +267,6 @@ class IncidentResource extends Resource
                 ActionGroup::make([
                     EditAction::make(),
                     
-                    // 🔥 AQUÍ ESTÁ EL BOTÓN DE PDF INTEGRADO
                     Action::make('descargar_pdf')
                         ->label('Descargar Acta (PDF)')
                         ->icon('heroicon-o-document-arrow-down')
