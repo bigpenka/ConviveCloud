@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
-use Filament\Models\Contracts\HasName; // 🔥 1. Importamos esta herramienta de Filament
+use Filament\Models\Contracts\HasName; 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class School extends Model implements HasName // 🔥 2. Le agregamos "implements HasName"
+class School extends Model implements HasName 
 {
     use HasFactory;
 
@@ -18,17 +19,31 @@ class School extends Model implements HasName // 🔥 2. Le agregamos "implement
         'direccion'
     ];
 
-    // 🔥 3. Agregamos esta función para traducirle a Filament
     public function getFilamentName(): string
     {
-        return $this->nombre; // Le decimos que el nombre real está en la columna 'nombre'
+        return $this->nombre; 
     }
+
+    /**
+     * 🚀 RELACIÓN CLAVE: Define que un colegio tiene muchos alumnos.
+     * Esto soluciona el error "does not have a relationship named [students]".
+     */
+    public function students(): HasMany
+    {
+        return $this->hasMany(Student::class);
+    }
+
+    public function courses(): HasMany
+    {
+        return $this->hasMany(Course::class);
+    }
+
     public function incidents(): HasMany
     {
         return $this->hasMany(Incident::class);
     }
-    // 🔥 Le decimos que use la tabla intermedia 'school_user' (Muchos a Muchos)
-    public function users(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+
+    public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'school_user', 'school_id', 'user_id');
     }

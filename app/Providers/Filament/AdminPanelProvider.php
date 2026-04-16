@@ -2,7 +2,9 @@
 
 namespace App\Providers\Filament;
 
-use App\Models\School; // 🔥 CORREGIDO: Importamos el modelo School
+use App\Models\School; 
+use App\Filament\Pages\Tenancy\RegisterSchool; // 🔥 Importado para el registro de colegios
+use App\Filament\Pages\Tenancy\EditSchoolProfile; // 🔥 Importado para editar el perfil del colegio
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -24,15 +26,17 @@ class AdminPanelProvider extends PanelProvider
     public function panel(Panel $panel): Panel
     {
         return $panel
-        ->default()
-        ->id('admin')
-        ->path('admin')
-        ->login()
-        
-        // 🏢 CONFIGURACIÓN MULTI-COLEGIO
-        ->tenant(School::class, slugAttribute: 'slug') // 🔥 CORREGIDO: Usamos School::class
-        
-        ->brandName('ConviveCloud')
+            ->default()
+            ->id('admin')
+            ->path('admin')
+            ->login()
+            
+            // 🏢 CONFIGURACIÓN MULTI-COLEGIO
+            ->tenant(School::class, slugAttribute: 'slug') 
+            ->tenantRegistration(RegisterSchool::class) // 🔥 Habilita el botón "Registrar Nuevo Colegio"
+            ->tenantProfile(EditSchoolProfile::class)   // 🔥 Habilita el botón "Perfil del Colegio"
+            
+            ->brandName('ConviveCloud')
             
             ->colors([
                 'primary' => Color::Indigo,
@@ -58,7 +62,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             
             ->plugins([
-                // 🔥 COMENTAMOS ESTA LÍNEA TEMPORALMENTE PARA QUE TE DEJE ENTRAR AL DASHBOARD
+                // Mantenemos el plugin de Shield configurado
                  \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make()
             ])
 

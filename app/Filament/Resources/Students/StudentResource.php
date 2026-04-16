@@ -4,8 +4,11 @@ namespace App\Filament\Resources\Students;
 
 use App\Filament\Resources\Students\Pages\ManageStudents;
 use App\Models\Student;
+use App\Rules\ValidRut;
 use Filament\Forms\Form;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Section;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
@@ -18,32 +21,78 @@ class StudentResource extends Resource
 {
     protected static ?string $model = Student::class;
 
-    // EL FIX: Tipado simple para Filament 3
     protected static ?string $navigationIcon = 'heroicon-o-users';
-
     protected static ?string $navigationLabel = 'Alumnos';
     protected static ?string $modelLabel = 'Alumno';
     protected static ?string $pluralModelLabel = 'Alumnos';
     protected static ?string $recordTitleAttribute = 'nombres';
 
-    // Cambiamos Schema por Form y components() por schema()
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                TextInput::make('rut')
-                    ->label('RUT')
-                    ->required()
-                    ->unique(ignoreRecord: true),
-                TextInput::make('nombres')
-                    ->label('Nombres')
-                    ->required(),
-                TextInput::make('apellidos')
-                    ->label('Apellidos')
-                    ->required(),
-                TextInput::make('curso')
-                    ->label('Curso')
-                    ->required(),
+                // 👤 SECCIÓN 1: DATOS DEL ALUMNO
+                Section::make('Datos del Estudiante')
+                    ->schema([
+                        TextInput::make('rut')
+                            ->label('RUT')
+                            ->required()
+                            ->unique(ignoreRecord: true)
+                            ->rule(new ValidRut())
+                            // 🚀 Validación en tiempo real
+                            ->live(onBlur: true) 
+                            ->afterStateUpdated(function (\Filament\Forms\Contracts\HasForms $livewire, \Filament\Forms\Components\Component $component) {
+                                $livewire->validateOnly($component->getStatePath());
+                            })
+                            ->placeholder('12.345.678-9')
+                            ->maxLength(12),
+                            
+                        TextInput::make('nombres')
+                            ->label('Nombres')
+                            ->required(),
+                            
+                        TextInput::make('apellidos')
+                            ->label('Apellidos')
+                            ->required(),
+                            
+                        // 🚀 Relación de Curso vinculada al Tenant
+                        Select::make('course_id') 
+                            ->relationship('course', 'nombre')
+                            ->label('Curso')
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                            ->createOptionForm([
+                                TextInput::make('nombre')
+                                    ->label('Nombre del Curso')
+                                    ->required()
+                                    ->placeholder('Ej: 1° Medio A'),
+                            ]),
+                    ])->columns(2),
+
+                // 👨‍👩‍👧 SECCIÓN 2: DATOS DEL APODERADO
+                Section::make('Contacto del Apoderado')
+                    ->description('Estos datos se usarán para enviar actas y alertas automáticas.')
+                    ->schema([
+                        TextInput::make('nombre_apoderado')
+                            ->label('Nombre Completo')
+                            ->maxLength(255),
+                            
+                        Select::make('parentesco_apoderado')
+                            ->label('Parentesco')
+                            ->options([
+                                'Padre' => 'Padre',
+                                'Madre' => 'Madre',
+                                'Tutor Legal' => 'Tutor Legal',
+                                'Otro' => 'Otro',
+                            ]),
+                            
+                        TextInput::make('email_apoderado')
+                            ->label('Correo Electrónico')
+                            ->email()
+                            ->placeholder('ejemplo@correo.com')
+                            ->maxLength(255),
+                    ])->columns(3),
             ]);
     }
 
@@ -63,7 +112,7 @@ class StudentResource extends Resource
                     ->label('Apellidos')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('curso')
+                TextColumn::make('course.nombre') 
                     ->label('Curso')
                     ->searchable()
                     ->sortable(),
@@ -73,9 +122,7 @@ class StudentResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->filters([
-                //
-            ])
+            ->filters([])
             ->actions([
                 EditAction::make(),
                 DeleteAction::make(),

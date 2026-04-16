@@ -2,17 +2,20 @@
 
 namespace App\Models;
 
+use App\Models\Traits\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsTo; // 🔥 Importación clave
 
 class Student extends Model
 {
-    // 🔥 Dejamos el modelo abierto para que Filament pueda guardar los datos y el ID del colegio
+    use BelongsToSchool;
+
+    // Permitimos que Filament guarde todos los campos (incluyendo el course_id)
     protected $guarded = []; 
 
-    // 🔥 Agregamos la relación exacta que Filament está buscando
-    public function school(): BelongsTo
+    // 🚀 ESTO ES LO QUE FALTABA: La conexión entre el Alumno y el Curso
+    public function course(): BelongsTo
     {
-        return $this->belongsTo(School::class);
+        return $this->belongsTo(Course::class);
     }
 }

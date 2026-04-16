@@ -6,6 +6,7 @@ use App\Filament\Resources\Incidents\Pages;
 use App\Models\Incident;
 use App\Models\Protocol;
 use App\Models\ProtocolStep;
+use App\Models\Course; // 🔥 Importamos el modelo Course
 use Filament\Forms\Form;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\DatePicker;
@@ -17,7 +18,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Fieldset; // 🔥 IMPORTANTE
+use Filament\Forms\Components\Fieldset;
 use Filament\Resources\Resource;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
@@ -42,40 +43,66 @@ class IncidentResource extends Resource
     {
         return $form
             ->schema([
+                // 🔒 Sección de Información General
                 Section::make('Información General')
                     ->schema([
-                        Select::make('student_id')
-                            ->relationship('student', 'nombres')
-                            ->label('Alumno')
+                        // 1️⃣ FILTRO DE CURSO
+                        Select::make('course_id')
+                            ->label('Filtrar por Curso')
+                            ->placeholder('Seleccione un curso...')
+                            ->options(fn () => Course::all()->mapWithKeys(function ($course) {
+                                // Mostramos Nombre + Sección (ej: 1° Medio A)
+                                return [$course->id => "{$course->nombre} " . ($course->seccion ?? '')];
+                            }))
+                            ->live() // 🔥 Hace que el formulario reaccione al cambio
                             ->searchable()
                             ->preload()
-                            ->nullable()
-                            ->helperText('Opcional en caso de protocolos institucionales'),
+                            ->afterStateUpdated(fn (Set $set) => $set('student_id', null)) // Limpia el alumno si cambias el curso
+                            ->disabled(fn (?Incident $record) => $record?->estado === 'Cerrado'),
+
+                        // 2️⃣ SELECTOR DE ALUMNO (DINÁMICO)
+                        Select::make('student_id')
+                            ->label('Alumno')
+                            ->relationship('student', 'nombres', function ($query, Get $get) {
+                                $courseId = $get('course_id');
+                                
+                                // 🚀 Si hay un curso seleccionado, filtramos los alumnos
+                                if ($courseId) {
+                                    return $query->where('course_id', $courseId);
+                                }
+                                
+                                // Si no hay curso, opcionalmente podrías devolver nada o todos
+                                return $query; 
+                            })
+                            ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->nombres} {$record->apellidos}") // Nombre completo
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->disabled(fn (?Incident $record) => $record?->estado === 'Cerrado'),
                         
                         DatePicker::make('fecha_incidente')
                             ->label('Fecha del Hecho')
                             ->default(now())
-                            ->required(),
+                            ->required()
+                            ->disabled(fn (?Incident $record) => $record?->estado === 'Cerrado'),
 
                         Select::make('protocol_id')
                             ->relationship('protocol', 'nombre')
                             ->label('Protocolo Aplicado')
                             ->live()
                             ->required()
+                            ->disabled(fn (?Incident $record) => $record?->estado === 'Cerrado')
                             ->afterStateUpdated(function (Set $set, $state) {
                                 if (!$state) {
                                     $set('checklist', []);
                                     return;
                                 }
-
                                 $steps = ProtocolStep::where('protocol_id', $state)->get();
-                                
                                 $set('checklist', $steps->map(fn ($step) => [
                                     'nombre_etapa' => $step->name,
                                     'completado' => false,
                                     'archivo_evidencia' => null,
                                     'observacion' => '',
-                                    // 🔥 Inicializamos TODOS los posibles campos para evitar errores de llave no definida en JSON
                                     'centro_medico' => null,
                                     'hora_accidente' => null,
                                     'tipo_lesion' => null,
@@ -100,11 +127,13 @@ class IncidentResource extends Resource
                             ->extraAttributes(['class' => 'font-bold text-indigo-600 uppercase']),
                     ])->columns(2),
 
+                // 🔒 Gestión de Protocolo (Repeater)
                 Section::make('Gestión de Protocolo y Evidencias')
-                    ->description('Complete los formularios digitales. Solo suba documentos si provienen de fuentes externas (ej: certificado médico, denuncia externa).')
+                    ->description('Complete los formularios digitales. Si el caso está cerrado, no podrá modificar estos datos.')
                     ->schema([
                         Repeater::make('checklist')
                             ->label('Etapas Obligatorias')
+                            ->disabled(fn (?Incident $record) => $record?->estado === 'Cerrado')
                             ->schema([
                                 Grid::make(3)->schema([
                                     TextInput::make('nombre_etapa')
@@ -121,98 +150,35 @@ class IncidentResource extends Resource
                                     FileUpload::make('archivo_evidencia')
                                         ->label('Documento Externo (Opcional)')
                                         ->directory('evidencias-incidentes')
-                                        ->preserveFilenames()
-                                        ->openable()
-                                        ->downloadable()
                                         ->columnSpan(1),
                                 ]),
 
-                                // 🔥 1. FORMULARIO DIGITAL: SALUD Y ACCIDENTES
-                                Fieldset::make('Detalles de Atención Médica / Derivación')
+                                Fieldset::make('Detalles de Atención Médica')
                                     ->schema([
                                         TextInput::make('centro_medico')->label('Centro Asistencial'),
-                                        TextInput::make('hora_accidente')->label('Hora exacta')->type('time'),
-                                        Textarea::make('tipo_lesion')->label('Detalle de la lesión o estado')->columnSpanFull(),
+                                        TextInput::make('hora_accidente')->label('Hora')->type('time'),
+                                        Textarea::make('tipo_lesion')->label('Detalle lesión')->columnSpanFull(),
                                     ])
-                                    ->visible(fn (Get $get) => in_array($get('nombre_etapa'), [
-                                        'Llenado Formulario Seguro Escolar', 
-                                        'Derivación a red de salud', 
-                                        'Derivación de urgencia', 
-                                        'Derivación SENDA'
-                                    ])),
+                                    ->visible(fn (Get $get) => in_array($get('nombre_etapa'), ['Derivación a red de salud', 'Derivación de urgencia', 'Llenado Formulario Seguro Escolar'])),
 
-                                // 🔥 2. FORMULARIO DIGITAL: ENTREVISTAS (Cubre Agresión Sexual, Bullying, etc)
-                                Fieldset::make('Acta de Entrevista / Informe')
+                                Fieldset::make('Acta de Entrevista')
                                     ->schema([
-                                        Select::make('asistencia_apoderado')->label('¿Asistió el apoderado?')
-                                            ->options(['Sí' => 'Sí', 'No' => 'No', 'No aplica' => 'No aplica']),
-                                        TextInput::make('nombre_entrevistado')->label('Nombre del entrevistado(s)'),
-                                        Textarea::make('relato_estudiante')->label('Relato / Temas Tratados')->rows(3)->columnSpanFull(),
-                                        Textarea::make('acuerdos_entrevista')->label('Acuerdos y Compromisos')->rows(2)->columnSpanFull(),
+                                        Select::make('asistencia_apoderado')->label('¿Asistió apoderado?')->options(['Sí' => 'Sí', 'No' => 'No']),
+                                        TextInput::make('nombre_entrevistado')->label('Entrevistado'),
+                                        Textarea::make('relato_estudiante')->label('Relato')->columnSpanFull(),
                                     ])
-                                    ->visible(fn (Get $get) => in_array($get('nombre_etapa'), [
-                                        'Entrevistas de investigación', 
-                                        'Informe a apoderados', 
-                                        'Entrevista con apoderado (Vigilancia)', 
-                                        'Entrevista apoderado', 
-                                        'Entrevista reservada', 
-                                        'Entrevista acuerdo nombre social', 
-                                        'Entrevistas conciliación'
-                                    ])),
+                                    ->visible(fn (Get $get) => str_contains(strtolower($get('nombre_etapa')), 'entrevista')),
 
-                                // 🔥 3. FORMULARIO DIGITAL: DENUNCIAS INSTITUCIONALES
-                                Fieldset::make('Registro de Denuncia Externa')
-                                    ->schema([
-                                        Select::make('institucion_denuncia')->label('Institución Receptora')
-                                            ->options(['Carabineros' => 'Carabineros (133)', 'PDI' => 'PDI (134)', 'Fiscalía' => 'Fiscalía', 'Tribunal de Familia' => 'Tribunal de Familia']),
-                                        TextInput::make('n_parte')->label('N° de Parte / RUC'),
-                                        DatePicker::make('fecha_denuncia')->label('Fecha de denuncia'),
-                                        Textarea::make('detalle_denuncia')->label('Hechos denunciados')->columnSpanFull(),
-                                    ])
-                                    ->visible(fn (Get $get) => in_array($get('nombre_etapa'), [
-                                        'Denuncia obligatoria (24 hrs)', 
-                                        'Denuncia (si hay tráfico)', 
-                                        'Llamado a Carabineros (133)', 
-                                        'Denuncia Tribunal Familia', 
-                                        'Denuncia penal'
-                                    ])),
-
-                                // 🔥 4. FORMULARIO DIGITAL: MEDIDAS
-                                Fieldset::make('Registro de Medidas Aplicadas')
-                                    ->schema([
-                                        Select::make('tipo_medida')->label('Tipo de Medida')
-                                            ->options(['Formativa' => 'Formativa / Pedagógica', 'Disciplinaria Leve' => 'Disciplinaria Leve', 'Suspensión' => 'Suspensión', 'Condicionalidad' => 'Condicionalidad', 'Cancelación Matrícula/Expulsión' => 'Expulsión']),
-                                        DatePicker::make('fecha_inicio_medida')->label('Fecha de Inicio'),
-                                        DatePicker::make('fecha_termino_medida')->label('Fecha de Término (Si aplica)'),
-                                        Textarea::make('fundamento_medida')->label('Fundamento de la medida según RICE')->columnSpanFull(),
-                                    ])
-                                    ->visible(fn (Get $get) => in_array($get('nombre_etapa'), [
-                                        'Aplicación de medidas formativas', 
-                                        'Medidas de resguardo inmediatas', 
-                                        'Medidas de resguardo escolar', 
-                                        'Medida disciplinaria inmediata', 
-                                        'Cese de discriminación',
-                                        'Retiro de objeto por autoridad'
-                                    ])),
-
-                                // CAJA DE OBSERVACIONES NORMAL
                                 Textarea::make('observacion')
-                                    ->label('Observaciones de la etapa (Uso General)')
+                                    ->label('Observaciones Generales')
                                     ->rows(2)
                                     ->columnSpanFull()
-                                    // Se oculta si la etapa cayó en alguno de los Fieldsets de arriba
-                                    ->hidden(fn (Get $get) => in_array($get('nombre_etapa'), [
-                                        'Llenado Formulario Seguro Escolar', 'Derivación a red de salud', 'Derivación de urgencia', 'Derivación SENDA',
-                                        'Entrevistas de investigación', 'Informe a apoderados', 'Entrevista con apoderado (Vigilancia)', 'Entrevista apoderado', 'Entrevista reservada', 'Entrevista acuerdo nombre social', 'Entrevistas conciliación',
-                                        'Denuncia obligatoria (24 hrs)', 'Denuncia (si hay tráfico)', 'Llamado a Carabineros (133)', 'Denuncia Tribunal Familia', 'Denuncia penal',
-                                        'Aplicación de medidas formativas', 'Medidas de resguardo inmediatas', 'Medidas de resguardo escolar', 'Medida disciplinaria inmediata', 'Cese de discriminación', 'Retiro de objeto por autoridad'
-                                    ])),
+                                    ->hidden(fn (Get $get) => !empty($get('centro_medico')) || !empty($get('nombre_entrevistado'))),
                             ])
                             ->addable(false)
+                            ->deletable(false)
                             ->reorderable(false)
-                            ->itemLabel(fn (array $state): ?string => $state['nombre_etapa'] ?? 'Etapa')
-                            ->collapsible()
-                            
+                            ->collapsible(),
                     ]),
 
                 Section::make('Narrativa de los Hechos')
@@ -220,6 +186,7 @@ class IncidentResource extends Resource
                         Textarea::make('descripcion')
                             ->label('Descripción detallada')
                             ->required()
+                            ->disabled(fn (?Incident $record) => $record?->estado === 'Cerrado')
                             ->columnSpanFull(),
                     ])
             ]);
@@ -229,31 +196,9 @@ class IncidentResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('fecha_incidente')
-                    ->label('Fecha')
-                    ->date('d-m-Y')
-                    ->sortable(),
-
-                TextColumn::make('student.nombres')
-                    ->label('Alumno')
-                    ->default('Emergencia Institucional')
-                    ->description(fn (Incident $record): string => $record->student ? "RUT: {$record->student->rut}" : "General"),
-
-                TextColumn::make('protocol.nombre')
-                    ->label('Protocolo')
-                    ->limit(30),
-
-                TextColumn::make('progreso')
-                    ->label('Documentación')
-                    ->getStateUsing(function (Incident $record): string {
-                        $total = count($record->checklist ?? []);
-                        if ($total === 0) return "Sin Etapas";
-                        $conArchivo = collect($record->checklist)->filter(fn($item) => !empty($item['archivo_evidencia']))->count();
-                        return "{$conArchivo} / {$total} Archivos";
-                    })
-                    ->badge()
-                    ->color(fn ($state) => str_contains($state, '0 /') ? 'danger' : 'success'),
-
+                TextColumn::make('fecha_incidente')->label('Fecha')->date('d-m-Y')->sortable(),
+                TextColumn::make('student.nombres')->label('Alumno')->default('Institucional'),
+                TextColumn::make('protocol.nombre')->label('Protocolo')->limit(30),
                 TextColumn::make('estado')
                     ->badge()
                     ->color(fn (string $state): string => match (strtolower($state)) {
@@ -266,22 +211,13 @@ class IncidentResource extends Resource
             ->actions([
                 ActionGroup::make([
                     EditAction::make(),
-                    
                     Action::make('descargar_pdf')
-                        ->label('Descargar Acta (PDF)')
+                        ->label('Descargar Acta')
                         ->icon('heroicon-o-document-arrow-down')
-                        ->color('danger')
                         ->action(function ($record) {
-                            $pdf = Pdf::loadView('pdf.incidente', [
-                                'incidente' => $record
-                            ]);
-                            
-                            return response()->streamDownload(
-                                fn () => print($pdf->output()), 
-                                "Acta-Incidente-{$record->id}.pdf"
-                            );
+                            $pdf = Pdf::loadView('pdf.incidente', ['incidente' => $record]);
+                            return response()->streamDownload(fn () => print($pdf->output()), "Acta-{$record->id}.pdf");
                         }),
-                        
                     DeleteAction::make(),
                 ])
             ]);
